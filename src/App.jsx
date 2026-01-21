@@ -278,26 +278,36 @@ export default function VDJRadioApp() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0f0f1a 100%)',
+      background: 'linear-gradient(160deg, #0a0a0f 0%, #12121a 30%, #1a1a2e 60%, #0f0f1a 100%)',
       fontFamily: "'Outfit', 'Segoe UI', sans-serif",
       color: '#fff',
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Animated background */}
+      {/* Animated background glow */}
       <div style={{
         position: 'fixed',
         top: 0, left: 0, right: 0, bottom: 0,
-        background: `radial-gradient(ellipse at 50% 0%, ${getStationColor()}15 0%, transparent 50%)`,
+        background: `radial-gradient(ellipse at 50% 0%, ${getStationColor()}12 0%, transparent 50%),
+                     radial-gradient(ellipse at 80% 20%, ${getStationColor()}08 0%, transparent 40%),
+                     radial-gradient(ellipse at 20% 80%, ${getStationColor()}05 0%, transparent 40%)`,
         pointerEvents: 'none',
-        transition: 'background 0.8s ease'
+        transition: 'background 1s ease'
+      }} />
+      
+      {/* Vignette effect */}
+      <div style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%)',
+        pointerEvents: 'none'
       }} />
       
       {/* Noise texture */}
       <div style={{
         position: 'fixed',
         top: 0, left: 0, right: 0, bottom: 0,
-        opacity: 0.03,
+        opacity: 0.025,
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
         pointerEvents: 'none'
       }} />
@@ -306,6 +316,11 @@ export default function VDJRadioApp() {
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
         
         * { box-sizing: border-box; }
+        
+        ::selection {
+          background: ${getStationColor()}40;
+          color: #fff;
+        }
         
         @keyframes pulse {
           0%, 100% { opacity: 1; }
@@ -330,24 +345,54 @@ export default function VDJRadioApp() {
           to { transform: rotate(360deg); }
         }
         
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        
+        @keyframes glow {
+          0%, 100% { filter: drop-shadow(0 0 8px ${getStationColor()}40); }
+          50% { filter: drop-shadow(0 0 20px ${getStationColor()}60); }
+        }
+        
         .station-btn {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
           border: none;
           outline: none;
+          backdrop-filter: blur(10px);
         }
         
         .station-btn:hover {
           transform: translateY(-4px);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.3);
         }
         
         .nav-btn {
           transition: all 0.2s ease;
           cursor: pointer;
+          position: relative;
+          overflow: hidden;
         }
         
         .nav-btn:hover {
           background: rgba(255,255,255,0.1);
+        }
+        
+        .nav-btn::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          width: 0;
+          height: 2px;
+          background: ${getStationColor()};
+          transition: all 0.3s ease;
+          transform: translateX(-50%);
+        }
+        
+        .nav-btn:hover::after {
+          width: 60%;
         }
         
         .like-btn {
@@ -364,6 +409,7 @@ export default function VDJRadioApp() {
         
         .visualizer-bar {
           transition: height 0.1s ease;
+          border-radius: 2px 2px 0 0;
         }
         
         .track-item {
@@ -372,6 +418,7 @@ export default function VDJRadioApp() {
         
         .track-item:hover {
           background: rgba(255,255,255,0.05) !important;
+          transform: translateX(4px);
         }
         
         ::-webkit-scrollbar {
@@ -379,13 +426,27 @@ export default function VDJRadioApp() {
         }
         
         ::-webkit-scrollbar-track {
-          background: rgba(255,255,255,0.05);
+          background: rgba(255,255,255,0.03);
           border-radius: 3px;
         }
         
         ::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.2);
+          background: rgba(255,255,255,0.15);
           border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(255,255,255,0.25);
+        }
+        
+        /* Premium button effects */
+        button, a {
+          position: relative;
+        }
+        
+        /* Smooth transitions globally */
+        * {
+          transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         }
       `}</style>
 
@@ -399,33 +460,45 @@ export default function VDJRadioApp() {
         borderBottom: '1px solid rgba(255,255,255,0.06)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Shield Logo */}
           <div style={{
             width: '48px',
             height: '48px',
-            borderRadius: '12px',
-            background: `linear-gradient(135deg, ${getStationColor()}, ${getStationColor()}80)`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '24px',
-            fontWeight: '800',
-            fontFamily: "'Space Mono', monospace",
-            boxShadow: `0 4px 20px ${getStationColor()}40`,
+            filter: `drop-shadow(0 4px 12px ${getStationColor()}40)`,
             transition: 'all 0.5s ease'
-          }}>V</div>
+          }}>
+            <svg viewBox="0 0 100 120" width="44" height="52">
+              {/* Shield body */}
+              <path d="M50 5 L90 15 C95 16 98 22 98 28 L95 85 C93 100 70 115 50 118 C30 115 7 100 5 85 L2 28 C2 22 5 16 10 15 Z" 
+                fill="#1a1a1f" stroke="#d4af37" strokeWidth="3"/>
+              {/* Inner shield */}
+              <path d="M50 12 L85 20 C88 21 90 25 90 30 L88 82 C86 94 68 106 50 108 C32 106 14 94 12 82 L10 30 C10 25 12 21 15 20 Z" 
+                fill="#0f0f14" stroke="#d4af37" strokeWidth="1.5"/>
+              {/* Center circle */}
+              <circle cx="50" cy="58" r="28" fill="#0a0a0f" stroke={getStationColor()} strokeWidth="2"/>
+              {/* Headphones icon */}
+              <path d="M35 58 C35 48 42 42 50 42 C58 42 65 48 65 58" 
+                fill="none" stroke="#c0c0c0" strokeWidth="3" strokeLinecap="round"/>
+              <rect x="32" y="55" width="8" height="14" rx="3" fill="#c0c0c0"/>
+              <rect x="60" y="55" width="8" height="14" rx="3" fill="#c0c0c0"/>
+            </svg>
+          </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', letterSpacing: '-0.5px' }}>
               VirtualDJ Radio
             </h1>
             <p style={{ 
-              margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.5)',
-              fontFamily: "'Space Mono', monospace", letterSpacing: '2px', textTransform: 'uppercase'
+              margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.4)',
+              fontFamily: "'Space Mono', monospace", letterSpacing: '3px', textTransform: 'uppercase'
             }}>100% Live Mixes</p>
           </div>
         </div>
 
         <nav style={{ display: 'flex', gap: '8px' }}>
-          {['listen', 'history', 'schedule', 'chat'].map(tab => (
+          {['listen', 'history', 'schedule'].map(tab => (
             <button
               key={tab}
               className="nav-btn"
@@ -1324,101 +1397,61 @@ export default function VDJRadioApp() {
             )}
           </div>
         )}
-
-        {/* Chat Tab */}
-        {activeTab === 'chat' && (
-          <div style={{ animation: 'slideUp 0.4s ease' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <div>
-                <h2 style={{ margin: '0 0 8px 0', fontSize: '28px', fontWeight: '700' }}>Community Chat</h2>
-                <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>
-                  Chat with DJs and listeners worldwide
-                </p>
-              </div>
-              <a
-                href="https://virtualdjradio.com/chat/"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  padding: '10px 20px',
-                  background: 'rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  color: '#fff',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-                Open in New Tab
-              </a>
-            </div>
-
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              borderRadius: '24px',
-              border: '1px solid rgba(255,255,255,0.06)',
-              overflow: 'hidden',
-              height: '600px'
-            }}>
-              <iframe
-                src="https://virtualdjradio.com/chat/"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  border: 'none',
-                  background: '#1a1a2e'
-                }}
-                title="VirtualDJ Radio Chat"
-                allow="microphone"
-              />
-            </div>
-
-            <p style={{
-              marginTop: '16px',
-              fontSize: '13px',
-              color: 'rgba(255,255,255,0.4)',
-              textAlign: 'center'
-            }}>
-              💡 You need a VirtualDJRadio account to chat.{' '}
-              <a href="https://virtualdjradio.com/register/" target="_blank" rel="noopener noreferrer" style={{ color: getStationColor() }}>
-                Register free
-              </a>
-            </p>
-          </div>
-        )}
       </main>
 
       {/* Footer */}
       <footer style={{
         position: 'relative',
-        padding: '32px 40px',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        padding: '40px',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
         marginTop: '60px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
+        background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.3))'
       }}>
-        <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
-          © 2026 VirtualDJ Radio • 100% Live Mixes
-        </p>
-        <div style={{ display: 'flex', gap: '24px' }}>
-          {['Website', 'Apps', 'Facebook', 'Twitter'].map((link, i) => (
-            <a
-              key={link}
-              href={['https://virtualdjradio.com', 'https://virtualdjradio.com/apps/', 'https://facebook.com/virtualdjradio', 'https://twitter.com/virtualdjradio'][i]}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'none' }}
-            >{link}</a>
-          ))}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          maxWidth: '1400px',
+          margin: '0 auto'
+        }}>
+          <div>
+            <p style={{ 
+              margin: '0 0 6px 0', 
+              fontSize: '13px', 
+              color: 'rgba(255,255,255,0.5)',
+              fontWeight: '500'
+            }}>
+              © 2026 Orbitalunderground HD Productions
+            </p>
+            <p style={{ 
+              margin: 0, 
+              fontSize: '11px', 
+              color: 'rgba(255,255,255,0.3)',
+              fontStyle: 'italic'
+            }}>
+              *Not affiliated with Atomix Productions
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '24px' }}>
+            {['Website', 'Apps', 'Facebook', 'Twitter'].map((link, i) => (
+              <a
+                key={link}
+                href={['https://virtualdjradio.com', 'https://virtualdjradio.com/apps/', 'https://facebook.com/virtualdjradio', 'https://twitter.com/virtualdjradio'][i]}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ 
+                  color: 'rgba(255,255,255,0.4)', 
+                  fontSize: '12px', 
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  letterSpacing: '0.5px',
+                  transition: 'color 0.2s ease'
+                }}
+                onMouseOver={(e) => e.target.style.color = getStationColor()}
+                onMouseOut={(e) => e.target.style.color = 'rgba(255,255,255,0.4)'}
+              >{link}</a>
+            ))}
+          </div>
         </div>
       </footer>
     </div>
