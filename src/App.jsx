@@ -36,15 +36,6 @@ const STATIONS = [
   }
 ];
 
-const MOCK_SCHEDULE = [
-  { time: '6:00 PM', dj: 'DJ Royski', show: 'Club Royski', channel: 'ClubZone', avatar: '🎧' },
-  { time: '7:00 PM', dj: 'DJ Da BomB', show: 'Under The House', channel: 'Hypnotica', avatar: '🎵' },
-  { time: '8:00 PM', dj: 'TechnoDj', show: 'Power Rooftop', channel: 'PowerBase', avatar: '🔊' },
-  { time: '9:00 PM', dj: 'DJ Limchoy', show: 'Evening Vibes', channel: 'TheGrind', avatar: '🎤' },
-  { time: '10:00 PM', dj: 'DJuanE', show: 'Beach Party Mix', channel: 'Hypnotica', avatar: '🌊' },
-  { time: '11:00 PM', dj: 'Clubmaster', show: 'House Circle', channel: 'ClubZone', avatar: '🏠' },
-];
-
 export default function VDJRadioApp() {
   const [currentStation, setCurrentStation] = useState(STATIONS[0]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -57,6 +48,7 @@ export default function VDJRadioApp() {
   const [likeCount, setLikeCount] = useState(0);
   const [trackHistory, setTrackHistory] = useState([]);
   const [metadataSource, setMetadataSource] = useState('waiting');
+  const [upcomingShows, setUpcomingShows] = useState([]);
   const playerRef = useRef(null);
   const audioRef = useRef(null);
   const libLoadedRef = useRef(false);
@@ -83,10 +75,27 @@ export default function VDJRadioApp() {
       }
     };
     
-    // Fetch immediately and then every 30 seconds
+    const fetchSchedule = async () => {
+      try {
+        const response = await fetch('/api/nowplaying?type=schedule');
+        if (response.ok) {
+          const data = await response.json();
+          setUpcomingShows(data.upcoming || []);
+        }
+      } catch (error) {
+        console.log('Schedule fetch error:', error);
+      }
+    };
+    
+    // Fetch immediately and then periodically
     fetchDjInfo();
-    const interval = setInterval(fetchDjInfo, 30000);
-    return () => clearInterval(interval);
+    fetchSchedule();
+    const djInterval = setInterval(fetchDjInfo, 30000);
+    const scheduleInterval = setInterval(fetchSchedule, 60000); // Check schedule every minute
+    return () => {
+      clearInterval(djInterval);
+      clearInterval(scheduleInterval);
+    };
   }, []);
 
   // Visualizer animation
@@ -633,7 +642,7 @@ export default function VDJRadioApp() {
                     {/* DJ Info */}
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        {djInfo[currentStation.id].isLive && (
+                        {djInfo[currentStation.id].isLive ? (
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -656,7 +665,18 @@ export default function VDJRadioApp() {
                             }}></span>
                             LIVE
                           </span>
-                        )}
+                        ) : djInfo[currentStation.id].isReplay ? (
+                          <span style={{
+                            padding: '2px 8px',
+                            background: 'rgba(255,255,255,0.1)',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            color: 'rgba(255,255,255,0.6)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>REPLAY</span>
+                        ) : null}
                         <span style={{
                           fontSize: '11px',
                           color: 'rgba(255,255,255,0.5)',
@@ -677,23 +697,6 @@ export default function VDJRadioApp() {
                         color: getStationColor()
                       }}>{djInfo[currentStation.id].showName}</p>
                     </div>
-                    {/* View Profile Link */}
-                    {djInfo[currentStation.id].djProfileUrl && (
-                      <a 
-                        href={djInfo[currentStation.id].djProfileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          padding: '8px 12px',
-                          background: 'rgba(255,255,255,0.1)',
-                          borderRadius: '8px',
-                          color: 'rgba(255,255,255,0.7)',
-                          fontSize: '12px',
-                          textDecoration: 'none',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >View DJ</a>
-                    )}
                   </div>
                 )}
 
@@ -1067,39 +1070,49 @@ export default function VDJRadioApp() {
                     Upcoming
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {MOCK_SCHEDULE.slice(0, 3).map((show, i) => (
-                      <div key={i} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '10px',
-                        background: 'rgba(255,255,255,0.02)',
-                        borderRadius: '10px'
-                      }}>
-                        <div style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '8px',
-                          background: `linear-gradient(135deg, ${STATIONS.find(s => s.name === show.channel)?.color || '#888'}30, transparent)`,
+                    {upcomingShows.length > 0 ? (
+                      upcomingShows.slice(0, 3).map((show, i) => (
+                        <div key={i} style={{
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '18px'
-                        }}>{show.avatar}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: '0 0 2px 0', fontSize: '12px', fontWeight: '600' }}>{show.show}</p>
-                          <p style={{ margin: 0, fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>{show.dj}</p>
+                          gap: '12px',
+                          padding: '10px',
+                          background: 'rgba(255,255,255,0.02)',
+                          borderRadius: '10px'
+                        }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: `linear-gradient(135deg, ${STATIONS.find(s => s.id === show.channel)?.color || getStationColor()}30, transparent)`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '16px'
+                          }}>🎧</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: '0 0 2px 0', fontSize: '12px', fontWeight: '600' }}>{show.showName}</p>
+                            <p style={{ margin: 0, fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>{show.djName}</p>
+                          </div>
+                          <div style={{
+                            padding: '4px 8px',
+                            background: 'rgba(255,255,255,0.05)',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontFamily: "'Space Mono', monospace",
+                            color: 'rgba(255,255,255,0.6)'
+                          }}>{show.time}</div>
                         </div>
-                        <div style={{
-                          padding: '4px 8px',
-                          background: 'rgba(255,255,255,0.05)',
-                          borderRadius: '4px',
-                          fontSize: '10px',
-                          fontFamily: "'Space Mono', monospace",
-                          color: 'rgba(255,255,255,0.6)'
-                        }}>{show.time}</div>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p style={{
+                        margin: 0,
+                        padding: '20px',
+                        textAlign: 'center',
+                        fontSize: '12px',
+                        color: 'rgba(255,255,255,0.4)'
+                      }}>No upcoming shows scheduled</p>
+                    )}
                   </div>
                   <a
                     href="https://virtualdjradio.com/schedule/"
@@ -1220,7 +1233,7 @@ export default function VDJRadioApp() {
         {activeTab === 'schedule' && (
           <div style={{ animation: 'slideUp 0.4s ease' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-              <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '700' }}>Today's Schedule</h2>
+              <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '700' }}>Upcoming Shows</h2>
               <a
                 href="https://virtualdjradio.com/schedule/"
                 target="_blank"
@@ -1236,54 +1249,79 @@ export default function VDJRadioApp() {
                 }}
               >Full Schedule</a>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-              {MOCK_SCHEDULE.map((show, i) => {
-                const station = STATIONS.find(s => s.name === show.channel);
-                return (
-                  <div key={i} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '20px',
-                    padding: '24px',
-                    background: 'rgba(255,255,255,0.03)',
-                    borderRadius: '16px',
-                    border: '1px solid rgba(255,255,255,0.06)'
-                  }}>
-                    <div style={{
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '16px',
-                      background: `linear-gradient(135deg, ${station?.color || '#888'}40, ${station?.color || '#888'}10)`,
+            {upcomingShows.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                {upcomingShows.map((show, i) => {
+                  const station = STATIONS.find(s => s.id === show.channel);
+                  return (
+                    <div key={i} style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '32px'
-                    }}>{show.avatar}</div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '600' }}>{show.show}</p>
-                      <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>with {show.dj}</p>
+                      gap: '20px',
+                      padding: '24px',
+                      background: 'rgba(255,255,255,0.03)',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(255,255,255,0.06)'
+                    }}>
                       <div style={{
-                        display: 'inline-block',
-                        padding: '4px 10px',
-                        background: `${station?.color || '#888'}20`,
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        color: station?.color || '#888'
-                      }}>{show.channel}</div>
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '16px',
+                        background: `linear-gradient(135deg, ${station?.color || getStationColor()}40, ${station?.color || getStationColor()}10)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '32px'
+                      }}>🎧</div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '600' }}>{show.showName}</p>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>with {show.djName}</p>
+                        {show.channelName && (
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '4px 10px',
+                            background: `${station?.color || getStationColor()}20`,
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            color: station?.color || getStationColor()
+                          }}>{show.channelName}</div>
+                        )}
+                      </div>
+                      <div style={{
+                        padding: '10px 16px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontFamily: "'Space Mono', monospace",
+                        fontWeight: '600'
+                      }}>{show.time}</div>
                     </div>
-                    <div style={{
-                      padding: '10px 16px',
-                      background: 'rgba(255,255,255,0.05)',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontFamily: "'Space Mono', monospace",
-                      fontWeight: '600'
-                    }}>{show.time}</div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '80px 40px',
+                background: 'rgba(255,255,255,0.03)',
+                borderRadius: '24px',
+                border: '1px solid rgba(255,255,255,0.06)'
+              }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" style={{ marginBottom: '16px' }}>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <p style={{ margin: '0 0 8px 0', fontSize: '15px', color: 'rgba(255,255,255,0.4)' }}>
+                  No upcoming shows scheduled right now
+                </p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
+                  Check back later or visit the official schedule
+                </p>
+              </div>
+            )}
           </div>
         )}
 
